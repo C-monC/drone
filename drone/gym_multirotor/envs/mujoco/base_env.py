@@ -2,9 +2,9 @@ import os
 import math
 from abc import ABC
 import numpy as np
-from gym import spaces
-from gym import utils
-from gym.envs.mujoco import MujocoEnv
+from gymnasium import spaces
+from gymnasium import utils
+from gymnasium.envs.mujoco import MujocoEnv
 from gym_multirotor import utils as multirotor_utils
 
 
@@ -43,36 +43,36 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
     obs_avel_index = np.arange(15, 18)
     action_index_thrust = np.arange(0, 4)
     render_mode = "human"
-    metadata = {
-            "render_modes": ["human", "rgb_array", "depth_array"],
-            "render_fps": 20
-        }
+    metadata = {"render_modes": ["human", "rgb_array", "depth_array"], "render_fps": 20}
 
-    def __init__(self,
-                 xml_name="quadrotor_plus.xml",
-                 frame_skip=5,
-                 error_tolerance=0.05,
-                 max_time_steps=1000,
-                 randomize_reset=True,
-                 disorient=True,
-                 sample_SO3=True,
-                 observation_noise_std=0.1,
-                 reduce_heading_error=True,
-                 env_bounding_box=3,
-                 init_max_vel=0.5,  
-                 init_max_angular_vel=0.1*math.pi,
-                 init_max_attitude=math.pi/3.0,
-                 bonus_to_reach_goal=15.0,
-                 max_reward_for_velocity_towards_goal=2.0,
-                 position_reward_constant=5.0,
-                 orientation_reward_constant=0.02,
-                 linear_velocity_reward_constant=0.01,
-                 angular_velocity_reward_constant=0.001,
-                 action_reward_constant=0.0025,
-                 reward_for_staying_alive=5.0,
-                 reward_scaling_coefficient=1.0,
-                 ):
-        xml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", xml_name))
+    def __init__(
+        self,
+        xml_name="quadrotor_plus.xml",
+        frame_skip=5,
+        error_tolerance=0.05,
+        max_time_steps=1000,
+        randomize_reset=True,
+        disorient=True,
+        sample_SO3=True,
+        observation_noise_std=0.1,
+        reduce_heading_error=True,
+        env_bounding_box=3,
+        init_max_vel=0.5,
+        init_max_angular_vel=0.1 * math.pi,
+        init_max_attitude=math.pi / 3.0,
+        bonus_to_reach_goal=15.0,
+        max_reward_for_velocity_towards_goal=2.0,
+        position_reward_constant=5.0,
+        orientation_reward_constant=0.02,
+        linear_velocity_reward_constant=0.01,
+        angular_velocity_reward_constant=0.001,
+        action_reward_constant=0.0025,
+        reward_for_staying_alive=5.0,
+        reward_scaling_coefficient=1.0,
+    ):
+        xml_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "assets", xml_name)
+        )
 
         self.error_tolerance = error_tolerance
         """float: Error tolerance. Default is `0.05`."""
@@ -189,18 +189,21 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         """numpy.ndarray: Buffer to keep record of orientation from mujoco. Stores current orientation quaternion.
         """
 
-        self.current_policy_action = np.array([-1, -1, -1, -1.])
+        self.current_policy_action = np.array([-1, -1, -1, -1.0])
         """numpy.ndarray: Buffer to hold current action input from policy to the environment. Stores the action vector scaled between (-1., 1.)
         """
 
         self.desired_position = np.array([0, 0, 3.0])
         """numpy.ndarray: Desired position of the system. Goal of the RL agent."""
 
-        self._time = 0              # initialize time counter.
-        self.gravity_mag = 9.81     # default value of acceleration due to gravity
+        self._time = 0  # initialize time counter.
+        self.gravity_mag = 9.81  # default value of acceleration due to gravity
+
+        self.observation_space = spaces.Box(-np.inf, np.inf, (18,), np.float32)
+        self.action_space = spaces.Box(-3.0, 3.0, (8,), np.float32)
 
         utils.EzPickle.__init__(self)
-        MujocoEnv.__init__(self, xml_path, frame_skip)
+        MujocoEnv.__init__(self, xml_path, frame_skip, self.observation_space)
 
         self.gravity_mag = float(abs(self.model.opt.gravity[2]))
 
@@ -213,7 +216,11 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         -------
         env_bounding_box_sphere_radius: float
         """
-        return self.norm(np.array([self.env_bounding_box, self.env_bounding_box, self.env_bounding_box]))
+        return self.norm(
+            np.array(
+                [self.env_bounding_box, self.env_bounding_box, self.env_bounding_box]
+            )
+        )
 
     @property
     def error_tolerance_norm(self):
@@ -224,7 +231,9 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         -------
         error_tolerance_norm_sphere_radius: float
         """
-        return self.norm(np.array([self.error_tolerance, self.error_tolerance, self.error_tolerance]))
+        return self.norm(
+            np.array([self.error_tolerance, self.error_tolerance, self.error_tolerance])
+        )
 
     def step(self, a):
         """
@@ -240,7 +249,11 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         ob = self._get_obs()
         notdone = np.isfinite(ob).all()
         done = not notdone
-        info = {"reward_info": reward, "mujoco_qpos": self.mujoco_qpos, "mujoco_qvel": self.mujoco_qvel}
+        info = {
+            "reward_info": reward,
+            "mujoco_qpos": self.mujoco_qpos,
+            "mujoco_qvel": self.mujoco_qvel,
+        }
         return ob, reward, done, info
 
     def clip_action(self, action, a_min=-1.0, a_max=1.0):
@@ -251,8 +264,7 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         return action
 
     def viewer_setup(self):
-        """This method is called when the viewer is initialized. Optionally implement this method, if you need to tinker with camera position and so forth.
-        """
+        """This method is called when the viewer is initialized. Optionally implement this method, if you need to tinker with camera position and so forth."""
         v = self.viewer
         v.cam.trackbodyid = 0
         v.cam.distance = self.model.stat.extent * 2.5
@@ -344,12 +356,12 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
             Magnitude of error in orientation.
 
         """
-        error = 0.
+        error = 0.0
         rpy = multirotor_utils.quat2euler(quat)
         if self.reduce_heading_error:
             error += self.norm(rpy)
         else:
-            error += self.norm(rpy[:2])     # exclude error in yaw
+            error += self.norm(rpy[:2])  # exclude error in yaw
 
         return error
 
@@ -457,8 +469,8 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         """
         if self.goal_reached(error_xyz):
             return self.max_reward_for_velocity_towards_goal
-        unit_xyz = error_xyz/(self.norm(error_xyz) + 1e-6)
-        velocity_direction = velocity/(self.norm(velocity) + 1e-6)
+        unit_xyz = error_xyz / (self.norm(error_xyz) + 1e-6)
+        velocity_direction = velocity / (self.norm(velocity) + 1e-6)
         reward = np.dot(unit_xyz, velocity_direction)
         return reward
 
@@ -476,7 +488,11 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
         terminate: bool
             ``True`` if current episode is over else ``False``.
         """
-        notdone = np.isfinite(ob).all() and self.is_within_env_bounds(ob[:3]) and (self._time < self.max_time_steps)
+        notdone = (
+            np.isfinite(ob).all()
+            and self.is_within_env_bounds(ob[:3])
+            and (self._time < self.max_time_steps)
+        )
         done = not notdone
         return done
 
@@ -517,7 +533,7 @@ class UAVBaseEnv(MujocoEnv, utils.EzPickle, ABC):
             xyz, mat, vel (in body frame of reference), avel
 
         """
-        xyz, mat, vel, avel = self.get_body_state(body_name)        # in world frame
+        xyz, mat, vel, avel = self.get_body_state(body_name)  # in world frame
 
         if xyz_ref is not None:
             xyz = np.array(xyz) - np.array(xyz_ref)

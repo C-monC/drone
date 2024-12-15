@@ -31,7 +31,7 @@ def get_ob_quadrotor(mujoco_pos, mujoco_vel):
     :return: numpy observation vector [shape (18,)]
     """
 
-    pos = mujoco_pos[:3]                    # possibly this pos represents error
+    pos = mujoco_pos[:3]  # possibly this pos represents error
 
     quat = mujoco_pos[3:7]
     rot_mat = quat2rot(quat)

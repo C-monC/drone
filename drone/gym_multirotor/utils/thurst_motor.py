@@ -49,8 +49,19 @@ class ThrustMotor:
     """
 
     def __init__(
-            self, kf, km, control_timestep, n_motor, random_state, time_constant=None,
-            mu=0.0, theta=0.15, sigma=0.15, sigma_min=0.05, sigma_decay=1, add_noise=False
+        self,
+        kf,
+        km,
+        control_timestep,
+        n_motor,
+        random_state,
+        time_constant=None,
+        mu=0.0,
+        theta=0.15,
+        sigma=0.15,
+        sigma_min=0.05,
+        sigma_decay=1,
+        add_noise=False,
     ):
         self.kf = kf
         self.km = km
@@ -58,8 +69,13 @@ class ThrustMotor:
         self.add_noise = add_noise
 
         self.motor_noise = OUNoise(
-            size=n_motor, random_state=random_state,
-            mu=mu, theta=theta, sigma=sigma, sigma_decay=sigma_decay, sigma_min=sigma_min
+            size=n_motor,
+            random_state=random_state,
+            mu=mu,
+            theta=theta,
+            sigma=sigma,
+            sigma_decay=sigma_decay,
+            sigma_min=sigma_min,
         )
 
         self.lpf_motor_speed = FirstOrderLowPassFilter(
@@ -127,7 +143,7 @@ class ThrustMotor:
         if self.add_noise:
             speed_actual += self.motor_noise.sample()
 
-        speed_actual = np.clip(speed_actual, a_min=0., a_max=np.inf)
+        speed_actual = np.clip(speed_actual, a_min=0.0, a_max=np.inf)
         return speed_actual
 
     def thrust_command2actual(self, thrust_command):
@@ -165,8 +181,8 @@ class ThrustMotor:
         self.lpf_motor_speed.reset()
 
 
-if __name__ == '__main__':
-    RPM_2_RAD_PER_SEC = 2 * np.pi / 60.
+if __name__ == "__main__":
+    RPM_2_RAD_PER_SEC = 2 * np.pi / 60.0
 
     kf = 6.11 * 10**-8 / (RPM_2_RAD_PER_SEC**2)
     km = 1.5 * 10**-9 / (RPM_2_RAD_PER_SEC**2)
@@ -185,7 +201,7 @@ if __name__ == '__main__':
         sigma=0.15,
         sigma_min=0.05,
         sigma_decay=1,
-        add_noise=True
+        add_noise=True,
     )
 
     for i in range(100):

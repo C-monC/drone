@@ -18,12 +18,13 @@ class TiltrotorPlus8DofHoverEnv(QuadrotorPlusHoverEnv):
     action_index_tilt = np.arange(4, 8)
 
     def __init__(self, xml_name="tiltrotor_plus_hover.xml", frame_skip=5):
-
         self.tilt_position_reward_constant = 1.0
         """float: Reward constant for position of the tilt servo.
         """
 
-        super(TiltrotorPlus8DofHoverEnv, self).__init__(xml_name=xml_name, frame_skip=frame_skip)
+        super(TiltrotorPlus8DofHoverEnv, self).__init__(
+            xml_name=xml_name, frame_skip=frame_skip
+        )
 
     def _get_obs(self):
         """
@@ -43,8 +44,8 @@ class TiltrotorPlus8DofHoverEnv(QuadrotorPlusHoverEnv):
         rot_mat = utils.quat2rot(qpos[3:7])
         tilt = qpos[7:11]
 
-        lvel = qvel[0:3]        # linear velocity
-        avel = qvel[3:6]        # angular velocity
+        lvel = qvel[0:3]  # linear velocity
+        avel = qvel[3:6]  # angular velocity
         obs = np.concatenate([e_pos, rot_mat.flatten(), lvel, avel, tilt]).ravel()
         return obs
 
@@ -60,15 +61,21 @@ class TiltrotorPlus8DofHoverEnv(QuadrotorPlusHoverEnv):
         """
 
         action_range = self.action_space.high - self.action_space.low
-        avg_actuation = np.array([self.mass * 9.81 * 0.25,
-                                  self.mass * 9.81 * 0.25,
-                                  self.mass * 9.81 * 0.25,
-                                  self.mass * 9.81 * 0.25,
-                                  0.0,
-                                  0.0,
-                                  0.0,
-                                  0.0])     # 4 propellers and 4 tilt-servos
-        motor_inputs = avg_actuation + a * action_range / (self.policy_range[1]-self.policy_range[0])
+        avg_actuation = np.array(
+            [
+                self.mass * 9.81 * 0.25,
+                self.mass * 9.81 * 0.25,
+                self.mass * 9.81 * 0.25,
+                self.mass * 9.81 * 0.25,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ]
+        )  # 4 propellers and 4 tilt-servos
+        motor_inputs = avg_actuation + a * action_range / (
+            self.policy_range[1] - self.policy_range[0]
+        )
         return motor_inputs
 
     def get_reward(self, ob, a):
@@ -86,13 +93,15 @@ class TiltrotorPlus8DofHoverEnv(QuadrotorPlusHoverEnv):
         """
         ob_quad, ob_tilt = ob[:18].copy(), ob[18:22]
         action_quad, action_tilt = a[0:4], a[4:8]
-        reward_quad, reward_info = super(TiltrotorPlus8DofHoverEnv, self).get_reward(ob_quad, action_quad)
+        reward_quad, reward_info = super(TiltrotorPlus8DofHoverEnv, self).get_reward(
+            ob_quad, action_quad
+        )
 
         reward_tilt = self.norm(ob_tilt) * (-self.tilt_position_reward_constant)
         reward_action_tilt = self.norm(action_tilt) * (-self.action_reward_constant)
 
-        reward_info['reward_tilt'] = reward_tilt
-        reward_info['action_tilt'] = reward_action_tilt
+        reward_info["reward_tilt"] = reward_tilt
+        reward_info["action_tilt"] = reward_action_tilt
 
         rewards = (reward_quad, reward_tilt, reward_action_tilt)
         reward = sum(rewards) * self.reward_scaling_coefficient
@@ -111,23 +120,45 @@ class TiltrotorPlus8DofHoverEnv(QuadrotorPlusHoverEnv):
                 - qvel_init (numpy.ndarray): Robot's initial velocity in mujoco with shape (10,).
         """
         if not randomize:
-            qpos_init = np.array([self.desired_position[0], self.desired_position[1], self.desired_position[2], 1., 0., 0., 0., 0., 0., 0., 0])
+            qpos_init = np.array(
+                [
+                    self.desired_position[0],
+                    self.desired_position[1],
+                    self.desired_position[2],
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0,
+                ]
+            )
             qvel_init = np.zeros((10,))
             return qpos_init, qvel_init
 
         # attitude (roll pitch yaw)
-        quat_init = np.array([1., 0., 0., 0.])
+        quat_init = np.array([1.0, 0.0, 0.0, 0.0])
         if self.disorient and self.sample_SO3:
             rot_mat = utils.sampleSO3()
             quat_init = utils.rot2quat(rot_mat)
         elif self.disorient:
-            attitude_euler_rand = np.random.uniform(low=-self.init_max_attitude, high=self.init_max_attitude, size=(3,))
+            attitude_euler_rand = np.random.uniform(
+                low=-self.init_max_attitude, high=self.init_max_attitude, size=(3,)
+            )
             quat_init = utils.euler2quat(attitude_euler_rand)
 
         c = 0.2
-        ep = np.random.uniform(low=-(self.env_bounding_box-c), high=(self.env_bounding_box-c), size=(3,))
+        ep = np.random.uniform(
+            low=-(self.env_bounding_box - c),
+            high=(self.env_bounding_box - c),
+            size=(3,),
+        )
         pos_init = ep + self.desired_position
-        tilt_init = np.random.uniform(low=-self.init_max_attitude, high=self.init_max_attitude, size=(4,))
+        tilt_init = np.random.uniform(
+            low=-self.init_max_attitude, high=self.init_max_attitude, size=(4,)
+        )
         vel_init = utils.sample_unit3d() * self.init_max_vel
         angular_vel_init = utils.sample_unit3d() * self.init_max_angular_vel
         tilt_vel = np.zeros((4,))

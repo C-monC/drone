@@ -1,7 +1,7 @@
 import numpy as np
 from gym_multirotor import utils
 from gym_multirotor.envs.mujoco.base_env import UAVBaseEnv
-from gym.envs.registration import EnvSpec
+from gymnasium.envs.registration import EnvSpec
 
 
 class QuadrotorPlusHoverEnv(UAVBaseEnv):
@@ -14,14 +14,25 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
     Args:
         frame_skip (int): Number of frames to skip before application of next action command to the environment from the control policy.
     """
-    spec = EnvSpec(id='QuadrotorPlusHoverEnv-v0',
-                    entry_point='gym_multirotor.envs.mujuco.quadrotor:QuadrotorPlusHoverEnv')
 
+    spec = EnvSpec(
+        id="QuadrotorPlusHoverEnv-v0",
+        entry_point="gym_multirotor.envs.mujuco.quadrotor:QuadrotorPlusHoverEnv",
+    )
 
-    def __init__(self, xml_name="quadrotor_plus.xml", frame_skip=5, env_bounding_box=1.2, randomize_reset=False):
-        super().__init__(xml_name=xml_name,
-                         frame_skip=frame_skip,
-                         env_bounding_box=env_bounding_box, randomize_reset=randomize_reset)
+    def __init__(
+        self,
+        xml_name="quadrotor_plus.xml",
+        frame_skip=5,
+        env_bounding_box=1.2,
+        randomize_reset=False,
+    ):
+        super().__init__(
+            xml_name=xml_name,
+            frame_skip=frame_skip,
+            env_bounding_box=env_bounding_box,
+            randomize_reset=randomize_reset,
+        )
 
     @property
     def hover_force(self):
@@ -44,7 +55,9 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
             numpy.ndarray: Vector of motor inputs of shape (4,).
         """
         motor_range = self.action_space.high.copy() - self.action_space.low.copy()
-        motor_inputs = self.hover_force + action * motor_range / (self.policy_range[1] - self.policy_range[0])
+        motor_inputs = self.hover_force + action * motor_range / (
+            self.policy_range[1] - self.policy_range[0]
+        )
         return motor_inputs
 
     def step(self, action):
@@ -63,7 +76,9 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
         """
 
         self._time += 1
-        a = self.clip_action(action, a_min=self.policy_range[0], a_max=self.policy_range[1])
+        a = self.clip_action(
+            action, a_min=self.policy_range[0], a_max=self.policy_range[1]
+        )
         action_mujoco = self.get_motor_input(a)
         xyz_position_before = self.get_body_com("core")[:3].copy()
         self.do_simulation(action_mujoco, self.frame_skip)
@@ -79,15 +94,22 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
 
         reward, reward_info = self.get_reward(ob, a)
 
-        info = {"reward_info": reward_info,
-                "desired_goal": self.desired_position.copy(),
-                "mujoco_qpos": self.mujoco_qpos,
-                "mujoco_qvel": self.mujoco_qvel}
+        info = {
+            "reward_info": reward_info,
+            "desired_goal": self.desired_position.copy(),
+            "mujoco_qpos": self.mujoco_qpos,
+            "mujoco_qvel": self.mujoco_qvel,
+        }
 
-        done = self.is_done(ob)
+        terminated = self.is_done(ob)
+        truncated = False
         if self.observation_noise_std:
-            ob += np.random.uniform(low=-self.observation_noise_std, high=self.observation_noise_std, size=ob.shape)
-        return ob, reward, done, info
+            ob += np.random.uniform(
+                low=-self.observation_noise_std,
+                high=self.observation_noise_std,
+                size=ob.shape,
+            )
+        return ob, reward, terminated, truncated, info
 
     def _get_obs(self):
         """
@@ -104,19 +126,21 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
         self.mujoco_qpos = np.array(qpos)
         self.mujoco_qvel = np.array(qvel)
 
-        e_pos = qpos[0:3] - self.desired_position               # position error
+        e_pos = qpos[0:3] - self.desired_position  # position error
 
         if self.current_quat is not None:
-            self.previous_quat = self.current_quat.copy()       # rotation matrix
+            self.previous_quat = self.current_quat.copy()  # rotation matrix
 
         quat = np.array(qpos[3:7])
         self.current_quat = np.array(quat)
-        rot_mat = utils.quat2rot(quat)                          # rotation matrix
+        rot_mat = utils.quat2rot(quat)  # rotation matrix
         vel = np.array(self.data.qvel[:3])
 
         # angular_vel = np.array(self.sim.data.get_body_xvelr("core"))
 
-        angular_vel = np.array(self.data.qvel[3:6])     # angular velocity of core of the robot in body frame.
+        angular_vel = np.array(
+            self.data.qvel[3:6]
+        )  # angular velocity of core of the robot in body frame.
 
         return np.concatenate([e_pos, rot_mat.flatten(), vel, angular_vel]).flatten()
 
@@ -138,23 +162,45 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
 
         reward_position = self.norm(ob[0:3]) * (-self.position_reward_constant)
 
-        reward_orientation = self.orientation_error(self.data.qpos[3:7]) * (-self.orientation_reward_constant)
+        reward_orientation = self.orientation_error(self.data.qpos[3:7]) * (
+            -self.orientation_reward_constant
+        )
 
-        reward_linear_velocity = self.norm(ob[12:15]) * (-self.linear_velocity_reward_constant)
+        reward_linear_velocity = self.norm(ob[12:15]) * (
+            -self.linear_velocity_reward_constant
+        )
 
-        reward_angular_velocity = self.norm(ob[15:18]) * (-self.angular_velocity_reward_constant)
+        reward_angular_velocity = self.norm(ob[15:18]) * (
+            -self.angular_velocity_reward_constant
+        )
 
         reward_action = self.norm(a) * (-self.action_reward_constant)
 
-        extra_bonus = self.bonus_reward_to_achieve_goal(ob[:3])   # EXTRA BONUS TO ACHIEVE THE GOAL
+        extra_bonus = self.bonus_reward_to_achieve_goal(
+            ob[:3]
+        )  # EXTRA BONUS TO ACHIEVE THE GOAL
 
-        extra_penalty = - self.bound_violation_penalty(ob[:3])    # PENALTY for bound violation
+        extra_penalty = -self.bound_violation_penalty(
+            ob[:3]
+        )  # PENALTY for bound violation
 
         reward_velocity_towards_goal = 0.0
         if self.norm(ob[0:3]) > self.error_tolerance_norm:
-            reward_velocity_towards_goal += self.reward_velocity_towards_goal(error_xyz=ob[:3], velocity=ob[12:15])
+            reward_velocity_towards_goal += self.reward_velocity_towards_goal(
+                error_xyz=ob[:3], velocity=ob[12:15]
+            )
 
-        rewards = (reward_position, reward_orientation, reward_linear_velocity, reward_angular_velocity, reward_action, alive_bonus, extra_bonus, extra_penalty, reward_velocity_towards_goal)
+        rewards = (
+            reward_position,
+            reward_orientation,
+            reward_linear_velocity,
+            reward_angular_velocity,
+            reward_action,
+            alive_bonus,
+            extra_bonus,
+            extra_penalty,
+            reward_velocity_towards_goal,
+        )
         reward = sum(rewards) * self.reward_scaling_coefficient
 
         reward_info = dict(
@@ -167,7 +213,7 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
             extra_bonus=extra_bonus,
             extra_penalty=extra_penalty,
             velocity_towards_goal=reward_velocity_towards_goal,
-            all=rewards
+            all=rewards,
         )
 
         return reward, reward_info
@@ -186,22 +232,38 @@ class QuadrotorPlusHoverEnv(UAVBaseEnv):
         """
 
         if not randomize:
-            qpos_init = np.array([self.desired_position[0], self.desired_position[1], self.desired_position[2], 1., 0., 0., 0.])
+            qpos_init = np.array(
+                [
+                    self.desired_position[0],
+                    self.desired_position[1],
+                    self.desired_position[2],
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                ]
+            )
             qvel_init = np.zeros((6,))
             return qpos_init, qvel_init
 
         # attitude (roll pitch yaw)
-        quat_init = np.array([1., 0., 0., 0.])
+        quat_init = np.array([1.0, 0.0, 0.0, 0.0])
         if self.disorient and self.sample_SO3:
             rot_mat = utils.sampleSO3()
             quat_init = utils.rot2quat(rot_mat)
         elif self.disorient:
-            attitude_euler_rand = np.random.uniform(low=-self.init_max_attitude, high=self.init_max_attitude, size=(3,))
+            attitude_euler_rand = np.random.uniform(
+                low=-self.init_max_attitude, high=self.init_max_attitude, size=(3,)
+            )
             quat_init = utils.euler2quat(attitude_euler_rand)
 
         # position (x, y, z)
         c = 0.2
-        ep = np.random.uniform(low=-(self.env_bounding_box-c), high=(self.env_bounding_box-c), size=(3,))
+        ep = np.random.uniform(
+            low=-(self.env_bounding_box - c),
+            high=(self.env_bounding_box - c),
+            size=(3,),
+        )
         pos_init = ep + self.desired_position
 
         # velocity (vx, vy, vz)

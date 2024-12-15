@@ -13,7 +13,7 @@ def sampleSO3():
     :return: rotation matrix sampled from uniform distribution as numpy array of shape (3,3).
     """
 
-    rand_rot = special_ortho_group.rvs(3)       # uniform sample from SO(3)
+    rand_rot = special_ortho_group.rvs(3)  # uniform sample from SO(3)
     return rand_rot
 
 
@@ -27,13 +27,14 @@ def sample_unit3d():
     :return: numpy 3D unit vector sampled from uniform distribution
     """
 
-    phi = np.random.uniform(0, 2*np.pi)
+    phi = np.random.uniform(0, 2 * np.pi)
     costheta = np.random.uniform(-1, 1)
     theta = np.arccos(costheta)
     x = np.sin(theta) * np.cos(phi)
     y = np.sin(theta) * np.sin(phi)
     z = np.cos(theta)
     return np.array([x, y, z])
+
 
 # TODO: Fix the random distribution of unit vector
 # def sample_unit3d(np_random):
@@ -82,7 +83,6 @@ def sample_unit3d():
 #     roll, pitch, yaw = np.arccos(x), np.arccos(y), np.arccos(z)
 #     quat = np.array(p.getQuaternionFromEuler([roll, pitch, yaw]))
 #     return quat
-
 
 
 def sample_quat():
@@ -147,11 +147,11 @@ class UniformRotation:
 
     def rpy(self, degrees=False):
         rmat = self.rotmat()
-        euler = Rotation.from_matrix(rmat).as_euler(seq='xyz', degrees=degrees)
+        euler = Rotation.from_matrix(rmat).as_euler(seq="xyz", degrees=degrees)
         return euler
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     random_state = np.random.RandomState(seed=10)
     ur = UniformRotation(random_state=random_state)
     a1 = []
@@ -167,6 +167,6 @@ if __name__ == '__main__':
     a2 = np.array(a2)
 
     np.testing.assert_array_almost_equal(a1, a2)
-    print('Test Successfull...')
+    print("Test Successfull...")
 
     print(random_state.standard_normal(size=4))

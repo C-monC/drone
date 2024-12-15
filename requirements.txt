@@ -1,7 +1,0 @@
-numpy
-gym
-scipy
-matplotlib
-baselines
-PyYAML
-mujoco
